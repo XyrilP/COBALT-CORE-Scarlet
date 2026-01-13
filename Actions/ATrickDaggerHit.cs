@@ -1,3 +1,4 @@
+using System;
 using FSPRO;
 using VionheartScarlet.Midrow;
 
@@ -5,6 +6,7 @@ namespace VionheartScarlet.Actions;
 
 public class ATrickDaggerHit : AMissileHit
 {
+    public bool targetPlayer;
     public override void Update(G g, State s, Combat c)
     {
         c.stuff.TryGetValue(worldX, out StuffBase? value);
@@ -14,6 +16,7 @@ public class ATrickDaggerHit : AMissileHit
             return;
         }
 
+        targetPlayer = missile.targetPlayer; // Fix for CC update 1.2.7
         Ship ship = targetPlayer ? s.ship : c.otherShip;
         if (ship == null)
         {

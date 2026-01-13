@@ -177,23 +177,24 @@ public class FadeManager : IKokoroApi.IV2.IStatusRenderingApi.IHook
     public static void AMissileHit_Update_Prefix(AMissileHit __instance, G g, State s, Combat c)
     {
         var amissilehit = __instance;
-        var ship = amissilehit.targetPlayer ? s.ship : c.otherShip;
-        var fadeValue = ship.Get(VionheartScarlet.Instance.Fade.Status);
-        var fadeStatus = VionheartScarlet.Instance.Fade.Status;
-        var shouldMiss = VionheartScarlet.Instance.Helper.ModData.GetModDataOrDefault(amissilehit, "shouldMiss", false);
-        if (fadeValue <= 0 && !shouldMiss) return; // This will fix the Kepler but bork the Fade vs. Missiles.
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
         c.stuff.TryGetValue(amissilehit.worldX, out StuffBase value);
 #pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-        if (!(value is Missile missile))
+        if (!(value is Missile { targetPlayer: var targetPlayer } missile))
         {
             amissilehit.timer -= g.dt;
             return;
         }
+        Ship ship = targetPlayer ? s.ship : c.otherShip;
         if (ship == null)
         {
             return;
         }
+        // var ship = missile.targetPlayer ? s.ship : c.otherShip;
+        var fadeValue = ship.Get(VionheartScarlet.Instance.Fade.Status);
+        var fadeStatus = VionheartScarlet.Instance.Fade.Status;
+        var shouldMiss = VionheartScarlet.Instance.Helper.ModData.GetModDataOrDefault(amissilehit, "shouldMiss", false);
+        if (fadeValue <= 0 && !shouldMiss) return; // This will fix the Kepler but bork the Fade vs. Missiles.
         RaycastResult raycastResult = CombatUtils.RaycastGlobal(c, ship, fromDrone: true, amissilehit.worldX);
         bool flag = false;
         if (raycastResult.hitShip)
@@ -238,19 +239,19 @@ public class FadeManager : IKokoroApi.IV2.IStatusRenderingApi.IHook
             int num = amissilehit.outgoingDamage;
             foreach (Artifact item in s.EnumerateAllArtifacts())
             {
-                num += item.ModifyBaseMissileDamage(s, s.route as Combat, amissilehit.targetPlayer);
+                num += item.ModifyBaseMissileDamage(s, s.route as Combat, missile.targetPlayer);
             }
             if (num < 0)
             {
                 num = 0;
             }
             DamageDone dmg = ship.NormalDamage(s, c, num, raycastResult.worldX);
-            EffectSpawner.NonCannonHit(g, amissilehit.targetPlayer, raycastResult, dmg);
+            EffectSpawner.NonCannonHit(g, missile.targetPlayer, raycastResult, dmg);
             if (amissilehit.xPush != 0)
             {
                 c.QueueImmediate(new AMove
                 {
-                    targetPlayer = amissilehit.targetPlayer,
+                    targetPlayer = missile.targetPlayer,
                     dir = amissilehit.xPush
                 }
                 );
@@ -270,7 +271,7 @@ public class FadeManager : IKokoroApi.IV2.IStatusRenderingApi.IHook
                 {
                     status = amissilehit.status.Value,
                     statusAmount = amissilehit.statusAmount,
-                    targetPlayer = amissilehit.targetPlayer
+                    targetPlayer = missile.targetPlayer
                 }
                 );
             }
@@ -279,7 +280,7 @@ public class FadeManager : IKokoroApi.IV2.IStatusRenderingApi.IHook
                 c.QueueImmediate(new AWeaken
                 {
                     worldX = amissilehit.worldX,
-                    targetPlayer = amissilehit.targetPlayer
+                    targetPlayer = missile.targetPlayer
                 }
                 );
             }
@@ -287,8 +288,8 @@ public class FadeManager : IKokoroApi.IV2.IStatusRenderingApi.IHook
             {
                 c.QueueImmediate(new AAttack
                 {
-                    damage = Card.GetActualDamage(s, ship.Get(Status.payback) + ship.Get(Status.tempPayback), !amissilehit.targetPlayer),
-                    targetPlayer = !amissilehit.targetPlayer,
+                    damage = Card.GetActualDamage(s, ship.Get(Status.payback) + ship.Get(Status.tempPayback), !missile.targetPlayer),
+                    targetPlayer = !missile.targetPlayer,
                     fast = true
                 }
                 );
